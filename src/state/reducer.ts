@@ -22,7 +22,6 @@ export type Action =
   | { type: 'deleteBuyIn'; participantId: string; buyInId: string }
   | { type: 'addTakeOut'; participantId: string; amount: number }
   | { type: 'deleteTakeOut'; participantId: string; takeOutId: string }
-  | { type: 'renameParticipant'; participantId: string; name: string }
   | { type: 'removeParticipant'; participantId: string }
   | { type: 'cashOutEarly'; participantId: string; amount: number }
   | { type: 'undoEarlyExit'; participantId: string }
@@ -149,15 +148,6 @@ export function makeReducer(deps: Deps) {
           ...p,
           buyIns: p.buyIns.filter((b) => b.id !== action.buyInId),
         }))
-
-      case 'renameParticipant': {
-        const name = action.name.trim()
-        if (name === '') return state
-        if (game.participants.some((p) => p.name === name && p.id !== action.participantId)) {
-          return state
-        }
-        return mapParticipant(game, action.participantId, (p) => ({ ...p, name }))
-      }
 
       case 'removeParticipant': {
         const target = game.participants.find((p) => p.id === action.participantId)

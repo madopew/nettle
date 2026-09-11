@@ -4,6 +4,8 @@ import { Button } from '../components/Button'
 import { ClockIcon } from '../components/ClockIcon'
 import { CashOutIcon } from '../components/CashOutIcon'
 import { CoinsIcon } from '../components/CoinsIcon'
+import { QuestionIcon } from '../components/QuestionIcon'
+import { Tour } from '../components/Tour'
 import { TrashIcon } from '../components/TrashIcon'
 import { Sheet } from '../components/Sheet'
 import { DEFAULT_QUICK_PICKS, dealer, potInPlay, totalIn, totalOut } from '../domain/game'
@@ -20,6 +22,10 @@ type Pad =
 
 const CLOCK_TICK_MS = 1_000
 
+// Remembers which game already showed its tour. Session-scoped, so a fresh visit
+// explains the table again, and keyed by game so a new game explains it again too.
+const TOUR_KEY = 'nettle.tour'
+
 export function GameScreen({ onOpenParticipant }: { onOpenParticipant: (id: string) => void }) {
   const { game, dispatch } = useGame()
   const [pad, setPad] = useState<Pad | null>(null)
@@ -27,15 +33,32 @@ export function GameScreen({ onOpenParticipant }: { onOpenParticipant: (id: stri
   const [joinName, setJoinName] = useState('')
   const [joinRole, setJoinRole] = useState<'player' | 'dealer'>('player')
   const [now, setNow] = useState(() => Date.now())
+  // Opening the table is the moment the labels need explaining. It hides itself if
+  // nobody moves it along, and the question mark brings it back on demand.
+  const [touring, setTouring] = useState(false)
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), CLOCK_TICK_MS)
     return () => clearInterval(id)
   }, [])
 
+  const gameId = game?.id
+  useEffect(() => {
+    if (!gameId) return
+    try {
+      if (sessionStorage.getItem(TOUR_KEY) === gameId) return
+      sessionStorage.setItem(TOUR_KEY, gameId)
+    } catch {
+      // Storage blocked. Showing the hints twice is harmless; hiding them is not.
+    }
+    setTouring(true)
+  }, [gameId])
+
   if (!game) return null
 
   const participants = game.participants
+  // The tour points at one row, and only a seated player has every control on it.
+  const tourRow = participants.find((p) => p.role === 'player' && p.leftAt === null)?.id
   const hasDealer = dealer(game) !== undefined
   const effectiveJoinRole = hasDealer ? 'player' : joinRole
 
@@ -56,18 +79,27 @@ export function GameScreen({ onOpenParticipant }: { onOpenParticipant: (id: stri
 
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-md flex-col px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6">
+    <div className="mx-auto flex min-h-full w-full max-w-md flex-col px-4 pt-6">
       <header className="mb-5 flex items-center justify-between gap-3 px-1">
         <div className="flex items-center gap-2">
           <ClockIcon className="size-6 shrink-0" />
-          <span className="text-lg tabular-nums text-slate-300">
+          <span data-tour="clock" className="text-lg tabular-nums text-slate-300">
             {formatClock(now - game.createdAt)}
           </span>
+          <button
+            type="button"
+            aria-label="Подсказки"
+            className="shrink-0 p-1 text-slate-500 active:text-slate-300"
+            onClick={() => setTouring(true)}
+          >
+            <QuestionIcon className="size-5" />
+          </button>
         </div>
         <div className="flex min-w-0 items-center gap-2">
           <CoinsIcon className="size-6 shrink-0" />
           <span
             data-testid="pot-in-play"
+            data-tour="pot"
             className="truncate text-lg font-semibold tabular-nums"
           >
             {formatTenge(potInPlay(game))}
@@ -78,6 +110,9 @@ export function GameScreen({ onOpenParticipant }: { onOpenParticipant: (id: stri
       <ul className="flex flex-col gap-2">
         {game.participants.map((p) => {
           const left = p.leftAt !== null
+          // The sheet only edits money, and the dealer has none of their own, so their
+          // row has nothing to open.
+          const editable = p.role === 'player' && !left
           return (
             <li
               key={p.id}
@@ -86,9 +121,9 @@ export function GameScreen({ onOpenParticipant }: { onOpenParticipant: (id: stri
             >
               <div
                 className={`min-w-0 flex-1 rounded-2xl bg-slate-900 px-4 py-3 ${
-                  left ? 'opacity-50' : 'cursor-pointer'
+                  left ? 'opacity-50' : editable ? 'cursor-pointer' : ''
                 }`}
-                onClick={left ? undefined : () => onOpenParticipant(p.id)}
+                onClick={editable ? () => onOpenParticipant(p.id) : undefined}
               >
               <div className="flex items-center gap-3">
                 <span className="flex min-h-12 min-w-0 flex-1 items-center text-base font-medium">
@@ -105,7 +140,11 @@ export function GameScreen({ onOpenParticipant }: { onOpenParticipant: (id: stri
                     (+{formatTenge(totalOut(p))})
                   </span>
                 )}
-                <span data-testid="total-in" className="tabular-nums text-slate-300">
+                <span
+                  data-testid="total-in"
+                  data-tour={p.id === tourRow ? 'total' : undefined}
+                  className="tabular-nums text-slate-300"
+                >
                   {p.role === 'dealer'
                     ? p.cashOut === null
                       ? ''
@@ -114,6 +153,7 @@ export function GameScreen({ onOpenParticipant }: { onOpenParticipant: (id: stri
                 </span>
                 {p.role === 'player' && !left && (
                   <Button
+                    data-tour={p.id === tourRow ? 'rebuy' : undefined}
                     aria-label={`Докупка: ${p.name}`}
                     onClick={(e) => {
                       e.stopPropagation()
@@ -136,6 +176,7 @@ export function GameScreen({ onOpenParticipant }: { onOpenParticipant: (id: stri
               {p.role === 'player' && (
                 <button
                   type="button"
+                  data-tour={p.id === tourRow ? 'actions' : undefined}
                   aria-label={`Действия: ${p.name}`}
                   className={`shrink-0 py-3 pl-4 pr-2 ${
                     left ? 'text-emerald-400' : 'text-slate-300 active:text-slate-100'
@@ -176,7 +217,7 @@ export function GameScreen({ onOpenParticipant }: { onOpenParticipant: (id: stri
         Добавить за стол
       </Button>
 
-      <div className="mt-auto pt-8">
+      <div className="sticky bottom-0 mt-auto bg-app pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <Button
           className="w-full"
           variant="primary"
@@ -385,6 +426,8 @@ export function GameScreen({ onOpenParticipant }: { onOpenParticipant: (id: stri
           </div>
         )}
       </Sheet>
+
+      {touring && <Tour onClose={() => setTouring(false)} />}
     </div>
   )
 }

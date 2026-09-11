@@ -15,9 +15,17 @@ export function net(p: Participant): number {
   return (p.cashOut ?? 0) + totalOut(p) - totalIn(p)
 }
 
-/** Money currently sitting on the table: everything bought in, less what was pocketed. */
+/**
+ * Money currently sitting on the table. Everything bought in, less everything carried
+ * away from it: chips pocketed mid-game, and the whole stack of anyone who has left.
+ * A winner who leaves takes out more than they brought, so their own share of the pot
+ * goes negative and the table shrinks by their winnings, which is exactly right.
+ */
 export function potInPlay(g: Game): number {
-  return g.participants.reduce((sum, p) => sum + totalIn(p) - totalOut(p), 0)
+  return g.participants.reduce((sum, p) => {
+    const carriedAway = p.leftAt === null ? 0 : (p.cashOut ?? 0)
+    return sum + totalIn(p) - totalOut(p) - carriedAway
+  }, 0)
 }
 
 export function gap(g: Game): number {

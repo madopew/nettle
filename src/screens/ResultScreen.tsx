@@ -70,7 +70,7 @@ export function ResultScreen() {
   }
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-md flex-col px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6">
+    <div className="mx-auto flex min-h-full w-full max-w-md flex-col px-4 pt-6">
       <h1 className="mb-1 text-2xl font-semibold">Расчёт</h1>
       <p className="mb-6 text-sm text-slate-400">
         {transfers.length === 0
@@ -116,7 +116,7 @@ export function ResultScreen() {
         ))}
       </ul>
 
-      <div className="mt-auto flex flex-col gap-2">
+      <div className="sticky bottom-0 mt-auto bg-app pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col gap-2">
         <Button onClick={share}>{copied ? 'Скопировано' : 'Поделиться'}</Button>
         <Button variant="primary" onClick={() => setConfirming(true)}>
           Новая игра

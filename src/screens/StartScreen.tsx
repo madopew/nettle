@@ -22,6 +22,8 @@ export function StartScreen() {
   const [role, setRole] = useState<'player' | 'dealer'>('player')
 
   const players = roster.filter((d) => d.role === 'player')
+  // The dealer does not count: a game is played by players.
+  const missing = MIN_PLAYERS - players.length
   const hasDealer = roster.some((d) => d.role === 'dealer')
   const effectiveRole = hasDealer ? 'player' : role
 
@@ -46,7 +48,7 @@ export function StartScreen() {
   }
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-md flex-col px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-8">
+    <div className="mx-auto flex min-h-full w-full max-w-md flex-col px-4 pt-8">
       <h1 className="mb-1 text-3xl font-bold uppercase tracking-wide text-emerald-400">Nettle</h1>
       <p className="mb-6 text-sm text-slate-400">Кто кому сколько должен</p>
 
@@ -94,22 +96,21 @@ export function StartScreen() {
         )}
       </ul>
 
-      <div className="mt-auto flex flex-col gap-2 pt-8">
-        {players.length >= MIN_PLAYERS && (
-          <Button
-            className="w-full"
-            variant="primary"
-            onClick={() =>
-              dispatch({
-                type: 'startGame',
-                players: players.map((d) => ({ name: d.name, buyIn: d.buyIn })),
-                dealerName: roster.find((d) => d.role === 'dealer')?.name,
-              })
-            }
-          >
-            Начать игру
-          </Button>
-        )}
+      <div className="sticky bottom-0 mt-auto bg-app pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col gap-2">
+        <Button
+          className="w-full"
+          variant="primary"
+          disabled={missing > 0}
+          onClick={() =>
+            dispatch({
+              type: 'startGame',
+              players: players.map((d) => ({ name: d.name, buyIn: d.buyIn })),
+              dealerName: roster.find((d) => d.role === 'dealer')?.name,
+            })
+          }
+        >
+          {missing > 0 ? shortBy(missing) : 'Начать игру'}
+        </Button>
         <Button className="w-full" onClick={() => setAdding(true)}>
           Добавить за стол
         </Button>
@@ -186,4 +187,13 @@ export function StartScreen() {
       </Sheet>
     </div>
   )
+}
+
+/** Russian makes the noun agree with the count: 1 игрок, 2 игрока, 5 игроков. */
+function shortBy(count: number): string {
+  if (count === 1) return 'Нужен ещё один игрок'
+  const teen = count % 100 >= 11 && count % 100 <= 14
+  const last = count % 10
+  if (!teen && last >= 2 && last <= 4) return `Нужно ещё ${count} игрока`
+  return `Нужно ещё ${count} игроков`
 }

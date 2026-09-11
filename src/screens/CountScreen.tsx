@@ -17,7 +17,7 @@ export function CountScreen() {
   const ready = allCountsEntered(game)
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-md flex-col px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6">
+    <div className="mx-auto flex min-h-full w-full max-w-md flex-col px-4 pt-6">
       <h1 className="mb-1 text-2xl font-semibold">Подсчёт</h1>
       <p className="mb-6 text-sm text-slate-400">Сколько у кого на руках</p>
 
@@ -85,7 +85,7 @@ export function CountScreen() {
         Завершить без расчёта
       </Button>
 
-      <div className="mt-auto flex flex-col gap-2 pt-8">
+      <div className="sticky bottom-0 mt-auto bg-app pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col gap-2">
         <BalanceBar gapValue={gapValue} ready={ready} />
         <Button
           className="w-full"

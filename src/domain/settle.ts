@@ -42,10 +42,18 @@ export function settle(input: Balance[]): SettleResult {
   }
   if (active.length === 0) return { transfers: [], exact: true }
   if (active.length > EXACT_LIMIT) {
-    return { transfers: settleGroup(active), exact: false }
+    return { transfers: byAmountDesc(settleGroup(active)), exact: false }
   }
   const groups = partitionIntoZeroSumGroups(active)
-  return { transfers: groups.flatMap(settleGroup), exact: true }
+  return { transfers: byAmountDesc(groups.flatMap(settleGroup)), exact: true }
+}
+
+/**
+ * Biggest payment first, so the list reads in the order people care about. Sorting is
+ * stable, so equal amounts keep the deterministic order the grouping already fixed.
+ */
+function byAmountDesc(transfers: Transfer[]): Transfer[] {
+  return transfers.sort((a, b) => b.amount - a.amount)
 }
 
 function partitionIntoZeroSumGroups(active: Balance[]): Balance[][] {
