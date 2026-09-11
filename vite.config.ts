@@ -5,6 +5,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/nettle/' : '/',
+  // Built into docs/ so GitHub Pages can serve it straight from the branch,
+  // with no build action involved.
+  build: { outDir: 'docs', emptyOutDir: true },
   server: { host: true },
   plugins: [
     react(),
